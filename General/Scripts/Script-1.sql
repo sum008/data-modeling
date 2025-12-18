@@ -59,4 +59,43 @@ select identifier, 'player'::vertex_type,
 from player_agg;
 
 
-select * from vertices;
+insert into vertices
+with deduped_teams as (
+select *, row_number() over (partition by team_id) as row_num
+from teams
+)
+select
+	team_id as identifier,
+	'team'::vertex_type as type,
+	json_build_object(
+		'abbreviation', abbreviation,
+		'nickname', nickname,
+		'city',city,
+		'arena', arena,
+		'year_founded', yearfounded
+	) as properties
+from deduped_teams
+where row_num=1;
+
+
+insert into edges
+with deduped_game_details as (
+select *, row_number() over (partition by player_id,game_id) as row_num
+from game_details
+)
+select
+	player_id as subject_identifier,
+	'player'::vertex_type as subject_type,
+	game_id as object_identifier,
+	'game'::vertex_type as object_type,
+	'plays_in'::edge_type as edge_type,
+	json_build_object(
+		'start_position', start_position,
+		'pts', pts,
+		'team_id', team_id,
+		'team_abbreviation', team_abbreviation
+	) as properties
+from deduped_game_details
+where row_num=1;
+
+select * from vertices v where type='team';
