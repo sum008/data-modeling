@@ -1,10 +1,11 @@
-create type vertex_type as enum('player','team','game');
+create type vertex_type as enum('player', 'team', 'game');
 
 create table vertices (
 	identifier text,
 	type vertex_type,
 	properties json,
-	primary key (identifier, type)
+	primary key (identifier,
+type)
 );
 
 create type edge_type as enum (
@@ -21,7 +22,11 @@ create table edges (
 	object_type vertex_type,
 	edge_type edge_type,
 	properties json,
-	primary key (subject_identifier, subject_type, object_identifier, object_type, edge_type)
+	primary key (subject_identifier,
+subject_type,
+object_identifier,
+object_type,
+edge_type)
 );
 
 insert
@@ -38,31 +43,42 @@ select
 from
 	games;
 
-
-insert into vertices
+insert
+	into
+	vertices
 with player_agg as (
-	select player_id as identifier,
+	select
+		player_id as identifier,
 			max(player_name) as player_name,
 			count(1) as number_of_games,
 			sum(pts) as total_points,
 			array_agg(distinct team_id) as teams
-	from game_details
-	group by player_id
+	from
+		game_details
+	group by
+		player_id
 )
-select identifier, 'player'::vertex_type,
+select
+	identifier,
+	'player'::vertex_type,
 		json_build_object(
 			'player_name', player_name,
 			'number_of_games', number_of_games,
 			'total_points', total_points,
 			'teams', teams
 		)
-from player_agg;
+from
+	player_agg;
 
-
-insert into vertices
+insert
+	into
+	vertices
 with deduped_teams as (
-select *, row_number() over (partition by team_id) as row_num
-from teams
+	select
+		*,
+		row_number() over (partition by team_id) as row_num
+	from
+		teams
 )
 select
 	team_id as identifier,
@@ -70,18 +86,25 @@ select
 	json_build_object(
 		'abbreviation', abbreviation,
 		'nickname', nickname,
-		'city',city,
+		'city', city,
 		'arena', arena,
 		'year_founded', yearfounded
 	) as properties
-from deduped_teams
-where row_num=1;
+from
+	deduped_teams
+where
+	row_num = 1;
 
-
-insert into edges
+insert
+	into
+	edges
 with deduped_game_details as (
-select *, row_number() over (partition by player_id,game_id) as row_num
-from game_details
+	select
+		*,
+		row_number() over (partition by player_id,
+		game_id) as row_num
+	from
+		game_details
 )
 select
 	player_id as subject_identifier,
@@ -95,7 +118,14 @@ select
 		'team_id', team_id,
 		'team_abbreviation', team_abbreviation
 	) as properties
-from deduped_game_details
-where row_num=1;
+from
+	deduped_game_details
+where
+	row_num = 1;
 
-select * from vertices v where type='team';
+select
+	*
+from
+	vertices v
+where
+	type = 'team';
